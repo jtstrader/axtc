@@ -1,16 +1,23 @@
-use serde::Deserialize;
+pub mod errors;
+
+use std::ffi::OsStr;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::PathBuf;
 
+use serde::Deserialize;
+
+use crate::errors::AxtcError;
+
 /// Different programs that can have their color scheme changed
+#[derive(Clone, PartialEq, Debug)]
 pub enum AxtcTarget {
-    Herbstluftwm,
-    Polybar,
-    Neovim,
-    Alacritty,
+    Herbstluftwm(PathBuf),
+    Polybar(PathBuf),
+    Neovim(PathBuf),
+    Alacritty(PathBuf),
 }
 
 /// Data structure for maintaining all colors
@@ -22,14 +29,16 @@ pub struct ColorScheme<'a> {
     foreground: &'a str,
 }
 
-/// Attempt to open the passed in file for changing the color scheme.
-pub fn verify_input_file(path: impl Into<PathBuf>) {
-    // If path does not exist, panic!
-    let path = path.into();
+/// Check if path is valid and points to a JSON file
+pub fn verify_input_file(path: impl Into<PathBuf>) -> Result<(), AxtcError> {
+    let path: PathBuf = path.into();
+
     if !path.exists() {
-        panic!("provided file \"{:?}\" does not exist", path);
-    } else if path.is_dir() {
-        panic!("provided input file \"{:?}\" is a directory", path);
+        Err(AxtcError::FileNotFound)
+    } else if path.is_dir() || path.extension().unwrap_or_default() != ".json" {
+        Err(AxtcError::InvalidFileFormat)
+    } else {
+        Ok(())
     }
 }
 

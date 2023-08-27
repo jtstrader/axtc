@@ -1,12 +1,8 @@
+use std::{path::PathBuf, process::Command};
+
 use clap::Parser;
-use std::env;
-use std::process::Command;
 
 use axtc::AxtcTarget;
-
-/// Reformats the Arch Linux with a provided color scheme file.
-const ALC_PATH: &'static str = "/home/jtstr/.config/alacritty/colors.yml";
-const PLY_PATH: &'static str = "/home/jtstr/.config/herbstluft/polybar/colors";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -15,7 +11,7 @@ struct Args {
     color_file: String,
 
     #[arg(long, default_value_t = false)]
-    herbstluft: bool,
+    herbstluftwm: bool,
 
     #[arg(long, default_value_t = false)]
     polybar: bool,
@@ -31,28 +27,42 @@ impl Args {
     pub fn gen_targets(&self) -> Vec<AxtcTarget> {
         use AxtcTarget as AXT;
 
-        let args = [self.herbstluft, self.polybar, self.neovim, self.alacritty];
+        let [herbstluftwm_path, polybar_path, neovim_path, alacritty_path] = [
+            "~/.config/herbstluftwm/autostart",
+            "~/.config/polybar/colors.ini",
+            "---TODO---",
+            "~/.config/alacritty/alacritty.yml",
+        ]
+        .map(simple_home_dir::expand_tilde)
+        .map(Option::unwrap);
+
+        let args = [self.herbstluftwm, self.polybar, self.neovim, self.alacritty];
         if args.into_iter().all(|arg| !arg) {
-            return vec![AXT::Herbstluftwm, AXT::Polybar, AXT::Neovim, AXT::Alacritty];
+            return vec![
+                AXT::Herbstluftwm(herbstluftwm_path),
+                AXT::Polybar(polybar_path),
+                AXT::Neovim(neovim_path),
+                AXT::Alacritty(alacritty_path),
+            ];
         }
 
         // Go through each possible arg
         let mut targets: Vec<AxtcTarget> = Vec::new();
 
-        if self.herbstluft {
-            targets.push(AXT::Herbstluftwm);
+        if self.herbstluftwm {
+            targets.push(AXT::Herbstluftwm(herbstluftwm_path));
         }
 
         if self.polybar {
-            targets.push(AXT::Polybar);
+            targets.push(AXT::Polybar(polybar_path));
         }
 
         if self.neovim {
-            targets.push(AXT::Neovim);
+            targets.push(AXT::Neovim(neovim_path));
         }
 
         if self.alacritty {
-            targets.push(AXT::Alacritty);
+            targets.push(AXT::Alacritty(alacritty_path));
         }
 
         targets
@@ -62,9 +72,17 @@ impl Args {
 fn main() {
     let args: Args = Args::parse();
     let (color_input_file, targets) = (args.color_file.clone(), args.gen_targets());
-    axtc::verify_input_file(&color_input_file);
-    axtc::write_colors(color_input_file, &targets);
-    issue_refresh();
+
+    match axtc::verify_input_file(&color_input_file) {
+        Ok(()) => {
+            axtc::write_colors(color_input_file, &targets);
+            issue_refresh();
+        }
+        Err(e) => {
+            eprintln!("axtc: {}", e);
+            std::process::exit(1);
+        }
+    };
 }
 
 /// Refresh Polybar and bspwm
