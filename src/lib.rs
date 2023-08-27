@@ -1,10 +1,9 @@
-use regex::Regex;
 use serde::Deserialize;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::BufWriter;
 use std::io::Write;
-use std::path::Path;
+use std::path::PathBuf;
 
 /// Data structure for maintaining all colors
 #[derive(Deserialize, Debug)]
@@ -15,47 +14,27 @@ pub struct ColorScheme<'a> {
     foreground: &'a str,
 }
 
-/// Try to open the provided file. If it cannot be opened, create the file
-/// and return a File object that points to the newly created file.
-pub fn verify_output_file(path: &str) {
-    // If path does not exist, attempt to create the file.
-    // If file creation fails, exit the program and log an error.
-    let ppath: &Path = Path::new(path);
-    if !ppath.exists() {
-        match File::create(path) {
-            Ok(_) => {}
-            Err(e) => {
-                panic!("{}", e);
-            }
-        }
-    } else if ppath.is_dir() {
-        panic!(
-            "designated output file with path \"{}\" is a directory",
-            path
-        );
-    }
-}
-
 /// Attempt to open the passed in file for changing the color scheme.
-pub fn verify_input_file(path: &str) {
+pub fn verify_input_file(path: impl Into<PathBuf>) {
     // If path does not exist, panic!
-    let ppath: &Path = Path::new(path);
-    if !ppath.exists() {
-        panic!("provided file \"{}\" does not exist", path);
-    } else if ppath.is_dir() {
-        panic!("provided input file \"{}\" is a directory", path);
+    let path = path.into();
+    if !path.exists() {
+        panic!("provided file \"{:?}\" does not exist", path);
+    } else if path.is_dir() {
+        panic!("provided input file \"{:?}\" is a directory", path);
     }
 }
 
 /// Write out color information to the files provided
-pub fn write_colors(path: &str, alc_path: &str, ply_path: &str, bsp_path: &str, wlp_path: &str) {
+pub fn write_colors(color_file_path: impl Into<PathBuf>) {
     // Deserialize data into our ColorScheme struct
-    let data = &fs::read_to_string(path).unwrap();
+    let path = color_file_path.into();
+    let data = &fs::read_to_string(&path).unwrap();
     let color_scheme = match serde_json::from_str::<ColorScheme>(data) {
         Ok(cs) => {
             if cs.color.len() != 16 {
                 panic!(
-                    "\"{}\" contains invalid JSON, length of color array is {}, expected {}",
+                    "\"{:?}\" contains invalid JSON, length of color array is {}, expected {}",
                     path,
                     cs.color.len(),
                     16
@@ -68,9 +47,8 @@ pub fn write_colors(path: &str, alc_path: &str, ply_path: &str, bsp_path: &str, 
         }
     };
 
-    write_alacritty(&color_scheme, alc_path);
-    write_polybar(&color_scheme, ply_path);
-    write_bspwmrc(color_scheme.theme, bsp_path, wlp_path);
+    //write_alacritty(&color_scheme, alc_path);
+    //write_polybar(&color_scheme, ply_path);
 }
 
 /// Write out color scheme in Alacritty format
@@ -175,21 +153,4 @@ fn write_polybar(cs: &ColorScheme, path: &str) {
 
     // bright colors
     write_colors(&mut f, true);
-}
-
-/// Change the theme value saved in bspwmrc
-fn write_bspwmrc(theme: &str, path: &str, wlp_path: &str) {
-    // do not use File::create, as that would overrite the file and we wish to read from it first
-    // confirm that the wallpaper directory is valid, otherwise inform the user that the wallpaper
-    // change may not work properly, and may cause errors to be thrown
-    if !Path::new(wlp_path).exists() || !Path::new(wlp_path).is_dir() {
-        eprintln!("axtc: WARNING: wallpaper change not in affect, could not find wallpaper directory \"{}\"", wlp_path);
-        return;
-    }
-
-    verify_output_file(path);
-    let bspwmrc_contents = fs::read_to_string(path).unwrap();
-    let re = Regex::new(r"theme=.*").unwrap();
-    let bspwmrc_contents = re.replace(&bspwmrc_contents, format!("theme={}", theme));
-    fs::write(path, &*bspwmrc_contents).unwrap();
 }

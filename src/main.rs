@@ -1,21 +1,30 @@
-use axyl_theme_changer as axtc;
+use arch_extendable_theme_changer as axtc;
+
+use clap::Parser;
 use std::env;
 use std::process::Command;
 
-/// Reformats the Axyl Linux Distro with a provided color scheme file.
-const ALC_PATH: &'static str = "/home/jtstr/.config/bspwm/alacritty/colors.yml";
-const PLY_PATH: &'static str = "/home/jtstr/.config/bspwm/polybar/colors";
-const BSP_PATH: &'static str = "/home/jtstr/.config/bspwm/bspwmrc";
-const WLP_PATH: &'static str = "/home/jtstr/.config/bspwm/wallpapers";
+/// Reformats the Arch Linux with a provided color scheme file.
+const ALC_PATH: &'static str = "/home/jtstr/.config/alacritty/colors.yml";
+const PLY_PATH: &'static str = "/home/jtstr/.config/herbstluft/polybar/colors";
+
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Args {
+    #[arg(long, default_value_t = false)]
+    herbstluft: bool,
+
+    #[arg(long, default_value_t = false)]
+    polybar: bool,
+
+    #[arg(long, default_value_t = false)]
+    vim: bool,
+
+    #[arg(long, default_value_t = false)]
+    alacritty: bool,
+}
 
 fn main() {
-    // attempt to load all file information
-    // files to be changed:
-    //   1. alacritty/colors.yml (change colors directly)
-    //   2. polybar/colors (change colors directly)
-    //   3. bspwmrc (use regex to change theme= line)
-
-    // attempt to read the color information into the HashMap
     let args_list: Vec<String> = env::args().collect();
     if args_list.len() == 1 {
         panic!("no provided input file");
@@ -23,7 +32,7 @@ fn main() {
     let color_input_file: &str = &args_list[1];
 
     axtc::verify_input_file(color_input_file);
-    axtc::write_colors(color_input_file, ALC_PATH, PLY_PATH, BSP_PATH, WLP_PATH);
+    axtc::write_colors(color_input_file);
     issue_refresh();
 }
 
@@ -33,8 +42,8 @@ fn issue_refresh() {
         .arg("polybar")
         .spawn()
         .expect("failed to pkill polybar");
-    Command::new("bspc")
-        .args(vec!["wm", "-r"])
+    Command::new("herbstclient")
+        .arg("reload")
         .spawn()
-        .expect("failed to restart bspwm");
+        .expect("failed to reload herbstluftwm");
 }
