@@ -5,6 +5,14 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Different programs that can have their color scheme changed
+pub enum AxtcTarget {
+    Herbstluftwm,
+    Polybar,
+    Neovim,
+    Alacritty,
+}
+
 /// Data structure for maintaining all colors
 #[derive(Deserialize, Debug)]
 pub struct ColorScheme<'a> {
@@ -26,7 +34,7 @@ pub fn verify_input_file(path: impl Into<PathBuf>) {
 }
 
 /// Write out color information to the files provided
-pub fn write_colors(color_file_path: impl Into<PathBuf>) {
+pub fn write_colors(color_file_path: impl Into<PathBuf>, targets: &[AxtcTarget]) {
     // Deserialize data into our ColorScheme struct
     let path = color_file_path.into();
     let data = &fs::read_to_string(&path).unwrap();

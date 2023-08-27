@@ -60,7 +60,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "arch-extendable-theme-changer"
+name = "axtc"
 version = "0.1.0"
 dependencies = [
  "clap",
