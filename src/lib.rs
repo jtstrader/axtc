@@ -1,10 +1,9 @@
 pub mod errors;
 
-use std::ffi::OsStr;
 use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::BufWriter;
 use std::io::Write;
+use std::io::{self, BufWriter};
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -35,7 +34,7 @@ pub fn verify_input_file(path: impl Into<PathBuf>) -> Result<(), AxtcError> {
 
     if !path.exists() {
         Err(AxtcError::FileNotFound)
-    } else if path.is_dir() || path.extension().unwrap_or_default() != ".json" {
+    } else if path.is_dir() || path.extension().unwrap_or_default() != "json" {
         Err(AxtcError::InvalidFileFormat)
     } else {
         Ok(())
@@ -43,7 +42,7 @@ pub fn verify_input_file(path: impl Into<PathBuf>) -> Result<(), AxtcError> {
 }
 
 /// Write out color information to the files provided
-pub fn write_colors(color_file_path: impl Into<PathBuf>, targets: &[AxtcTarget]) {
+pub fn write_colors(color_file_path: impl Into<PathBuf>, targets: &[AxtcTarget]) -> io::Result<()> {
     // Deserialize data into our ColorScheme struct
     let path = color_file_path.into();
     let data = &fs::read_to_string(&path).unwrap();
@@ -64,25 +63,24 @@ pub fn write_colors(color_file_path: impl Into<PathBuf>, targets: &[AxtcTarget])
         }
     };
 
-    //write_alacritty(&color_scheme, alc_path);
-    //write_polybar(&color_scheme, ply_path);
+    for target in targets {
+        match target {
+            AxtcTarget::Alacritty(path) => write_alacritty(&color_scheme, path)?,
+            _ => todo!(),
+        };
+    }
+
+    Ok(())
 }
 
 /// Write out color scheme in Alacritty format
-fn write_alacritty(cs: &ColorScheme, path: &str) {
-    // Open file w/ create (because we will use overwrite mode)
-    match File::create(path) {
-        Ok(_) => {}
-        Err(e) => {
-            panic!("{}", e);
-        }
-    };
+fn write_alacritty(cs: &ColorScheme, path: &PathBuf) -> io::Result<()> {
+    // Read in contents first, only want to overrite color data
+    let file_contents = fs::read_to_string(path)?;
 
-    let f = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(path)
-        .unwrap();
+    // Wipe file
+    fs::File::create(path)?;
+    let f = OpenOptions::new().write(true).open(path)?;
     let mut f = BufWriter::new(f);
 
     let colors: [&str; 8] = [
@@ -96,30 +94,57 @@ fn write_alacritty(cs: &ColorScheme, path: &str) {
     // the access to the single, mutable reference that's allowed. We instead can pass in the mutable
     // reference, treating this like a function. Only defined as a closure as its purpose is solely
     // for this function, and will be used nowhere else.
-    let write_colors = |fx: &mut BufWriter<File>, bright: bool| {
+    let write_colors = |fx: &mut BufWriter<File>, bright: bool| -> io::Result<()> {
         let shift = if bright { 8 } else { 0 };
         for (i, color) in colors.iter().enumerate() {
             let line = format!("    {:<10}'{}'", format!("{}:", color), cs.color[i + shift]);
-            writeln!(fx, "{}", line).unwrap();
+            writeln!(fx, "{}", line)?;
         }
-        writeln!(fx).unwrap();
+        writeln!(fx)?;
+        Ok(())
     };
 
-    // header through primary colors
-    writeln!(f, "# Colors ({} Theme)\n colors:", cs.theme).unwrap();
-    writeln!(f, "  # Default colors").unwrap();
-    writeln!(f, "  primary:").unwrap();
-    writeln!(f, "    background: '{}'", alcfmt(cs.background)).unwrap();
-    writeln!(f, "    foreground: '{}'", alcfmt(cs.foreground)).unwrap();
-    writeln!(f).unwrap();
+    // Write out contents of config until "colors:" is reached, then begin overwriting with new
+    // color config. Continue writing any additional config that occurs after.
+    let lines: Vec<&str> = file_contents
+        .split('\n')
+        .map(|line| line.trim_end())
+        .collect();
+    let mut idx: usize = 0;
+    while idx < lines.len() {
+        // If "colors:" is detected, write out colors and iterate.
+        // Otherwise just write out the current line.
+        if lines[idx] != "colors:" {
+            writeln!(f, "{}", lines[idx])?;
+            idx += 1;
+            continue;
+        }
 
-    // normal colors
-    writeln!(f, "  # Normal colors\n  normal:").unwrap();
-    write_colors(&mut f, false);
+        // Header through primary colors
+        writeln!(f, "colors:")?;
+        writeln!(f, "  # Default colors")?;
+        writeln!(f, "  primary:")?;
+        writeln!(f, "    background: '{}'", alcfmt(cs.background))?;
+        writeln!(f, "    foreground: '{}'", alcfmt(cs.foreground))?;
+        writeln!(f)?;
 
-    // bright colors
-    writeln!(f, "  # Bright colors\n  bright:").unwrap();
-    write_colors(&mut f, true);
+        // Normal colors
+        writeln!(f, "  # Normal colors\n  normal:")?;
+        write_colors(&mut f, false)?;
+
+        // Bright colors
+        writeln!(f, "  # Bright colors\n  bright:")?;
+        write_colors(&mut f, true)?;
+
+        idx += 1;
+        while (lines[idx].starts_with(|c| [' ', '\n', '#'].contains(&c)) || lines[idx].is_empty())
+            && idx < lines.len()
+        {
+            idx += 1;
+        }
+    }
+
+    Ok(())
 }
 
 /// Write out color scheme in Polybar format
