@@ -1,4 +1,5 @@
 pub mod errors;
+mod utils;
 
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -87,13 +88,6 @@ fn write_alacritty(cs: &ColorScheme, path: &PathBuf) -> io::Result<()> {
         "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
     ];
 
-    // remove # from front of color code and add 0x
-    let alcfmt = |s: &str| format!("0x{}", &s[1..]);
-
-    // do not use the variable in the current scope of the fuction, as that will give the closure
-    // the access to the single, mutable reference that's allowed. We instead can pass in the mutable
-    // reference, treating this like a function. Only defined as a closure as its purpose is solely
-    // for this function, and will be used nowhere else.
     let write_colors = |fx: &mut BufWriter<File>, bright: bool| -> io::Result<()> {
         let shift = if bright { 8 } else { 0 };
         for (i, color) in colors.iter().enumerate() {
@@ -124,8 +118,8 @@ fn write_alacritty(cs: &ColorScheme, path: &PathBuf) -> io::Result<()> {
         writeln!(f, "colors:")?;
         writeln!(f, "  # Default colors")?;
         writeln!(f, "  primary:")?;
-        writeln!(f, "    background: '{}'", alcfmt(cs.background))?;
-        writeln!(f, "    foreground: '{}'", alcfmt(cs.foreground))?;
+        writeln!(f, "    background: '{}'", cs.background)?;
+        writeln!(f, "    foreground: '{}'", cs.foreground)?;
         writeln!(f)?;
 
         // Normal colors

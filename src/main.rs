@@ -1,7 +1,9 @@
-use std::{path::PathBuf, process::Command};
+use std::io;
+use std::process::Command;
 
 use clap::Parser;
 
+use axtc::init_targets;
 use axtc::AxtcTarget;
 
 #[derive(Parser, Debug)]
@@ -47,35 +49,22 @@ impl Args {
         }
 
         // Go through each possible arg
-        let mut targets: Vec<AxtcTarget> = Vec::new();
-
-        if self.herbstluftwm {
-            targets.push(AXT::Herbstluftwm(herbstluftwm_path));
-        }
-
-        if self.polybar {
-            targets.push(AXT::Polybar(polybar_path));
-        }
-
-        if self.neovim {
-            targets.push(AXT::Neovim(neovim_path));
-        }
-
-        if self.alacritty {
-            targets.push(AXT::Alacritty(alacritty_path));
-        }
-
-        targets
+        init_targets!(
+            self.herbstluftwm => AXT::Herbstluftwm(herbstluftwm_path),
+            self.polybar => AXT::Polybar(polybar_path),
+            self.neovim => AXT::Neovim(neovim_path),
+            self.alacritty => AXT::Alacritty(alacritty_path)
+        )
     }
 }
 
-fn main() {
+fn main() -> io::Result<()> {
     let args: Args = Args::parse();
     let (color_input_file, targets) = (args.color_file.clone(), args.gen_targets());
 
     match axtc::verify_input_file(&color_input_file) {
         Ok(()) => {
-            axtc::write_colors(color_input_file, &targets);
+            axtc::write_colors(color_input_file, &targets)?;
             issue_refresh();
         }
         Err(e) => {
@@ -83,6 +72,8 @@ fn main() {
             std::process::exit(1);
         }
     };
+
+    Ok(())
 }
 
 /// Refresh Polybar and bspwm
