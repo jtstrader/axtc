@@ -1,6 +1,8 @@
 use std::io;
+use std::process::Child;
 use std::process::Command;
 
+use anyhow::Context;
 use clap::Parser;
 
 use axtc::init_targets;
@@ -12,15 +14,19 @@ struct Args {
     /// The input color file that contains the information in JSON.
     color_file: String,
 
+    /// Update the colorscheme of the herbstluft window manager.
     #[arg(long, default_value_t = false)]
     herbstluftwm: bool,
 
+    /// Update the colorscheme of the polybar.
     #[arg(long, default_value_t = false)]
     polybar: bool,
 
+    /// Update the colorscheme of the Neovim editor.
     #[arg(long, default_value_t = false)]
     neovim: bool,
 
+    /// Update the colorscheme of the Alacritty terminal.
     #[arg(long, default_value_t = false)]
     alacritty: bool,
 }
@@ -38,8 +44,7 @@ impl Args {
         .map(simple_home_dir::expand_tilde)
         .map(Option::unwrap);
 
-        let args = [self.herbstluftwm, self.polybar, self.neovim, self.alacritty];
-        if args.into_iter().all(|arg| !arg) {
+        if self.no_args_set() {
             return vec![
                 AXT::Herbstluftwm(herbstluftwm_path),
                 AXT::Polybar(polybar_path),
@@ -56,16 +61,21 @@ impl Args {
             self.alacritty => AXT::Alacritty(alacritty_path)
         )
     }
+
+    /// Check if no arguments are set. Return true if every argument in the arg struct is a false.
+    fn no_args_set(&self) -> bool {
+        !self.herbstluftwm && !self.polybar && !self.neovim && !self.alacritty
+    }
 }
 
-fn main() -> io::Result<()> {
+fn main() -> anyhow::Result<()> {
     let args: Args = Args::parse();
     let (color_input_file, targets) = (args.color_file.clone(), args.gen_targets());
 
     match axtc::verify_input_file(&color_input_file) {
         Ok(()) => {
             axtc::write_colors(color_input_file, &targets)?;
-            issue_refresh();
+            issue_refresh().into_iter().for_each(try_wait);
         }
         Err(e) => {
             eprintln!("axtc: {}", e);
@@ -77,13 +87,21 @@ fn main() -> io::Result<()> {
 }
 
 /// Refresh Polybar and bspwm
-fn issue_refresh() {
-    Command::new("pkill")
-        .arg("polybar")
-        .spawn()
-        .expect("failed to pkill polybar");
-    Command::new("herbstclient")
-        .arg("reload")
-        .spawn()
-        .expect("failed to reload herbstluftwm");
+fn issue_refresh() -> Vec<io::Result<Child>> {
+    vec![
+        Command::new("pkill").arg("polybar").spawn(),
+        Command::new("herbstclient").arg("reload").spawn(),
+    ]
+}
+
+/// Wait on child process or log error if the process could not be spawned.
+fn try_wait(handle_result: io::Result<Child>) {
+    match handle_result {
+        Ok(mut handle) => {
+            if let Err(e) = handle.wait() {
+                eprintln!("{}", e);
+            }
+        }
+        Err(e) => eprintln!("{}", e),
+    };
 }

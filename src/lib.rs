@@ -11,6 +11,8 @@ use serde::Deserialize;
 
 use crate::errors::AxtcError;
 
+const COLOR_ARRAY_LEN: usize = 16;
+
 /// Different programs that can have their color scheme changed
 #[derive(Clone, PartialEq, Debug)]
 pub enum AxtcTarget {
@@ -49,12 +51,12 @@ pub fn write_colors(color_file_path: impl Into<PathBuf>, targets: &[AxtcTarget])
     let data = &fs::read_to_string(&path).unwrap();
     let color_scheme = match serde_json::from_str::<ColorScheme>(data) {
         Ok(cs) => {
-            if cs.color.len() != 16 {
+            if cs.color.len() != COLOR_ARRAY_LEN {
                 panic!(
                     "\"{:?}\" contains invalid JSON, length of color array is {}, expected {}",
                     path,
                     cs.color.len(),
-                    16
+                    COLOR_ARRAY_LEN
                 );
             }
             cs
