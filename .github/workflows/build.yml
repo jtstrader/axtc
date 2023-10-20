@@ -1,0 +1,20 @@
+on: push
+name: Build axtc
+jobs:
+  build_axtc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+
+      - name: Build axtc
+        run: cargo build --release --all-features
+
+      - name: Test axtc
+        run: cargo test
