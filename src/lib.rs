@@ -25,7 +25,7 @@ pub enum AxtcTarget {
 /// Data structure for maintaining all colors
 #[derive(Deserialize, Debug)]
 pub struct ColorScheme<'a> {
-    theme: &'a str,
+    _theme: &'a str,
     color: Vec<&'a str>,
     background: &'a str,
     foreground: &'a str,
@@ -141,54 +141,4 @@ fn write_alacritty(cs: &ColorScheme, path: &PathBuf) -> io::Result<()> {
     }
 
     Ok(())
-}
-
-/// Write out color scheme in Polybar format
-fn write_polybar(cs: &ColorScheme, path: &str) {
-    // Open file w/ create (because we will use overwrite mode)
-    match File::create(path) {
-        Ok(_) => {}
-        Err(e) => {
-            panic!("{}", e);
-        }
-    };
-
-    let f = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(path)
-        .unwrap();
-    let mut f = BufWriter::new(f);
-
-    let colors: [&str; 8] = [
-        "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
-    ];
-
-    // do not use the variable in the current scope of the fuction, as that will give the closure
-    // the access to the single, mutable reference that's allowed. We instead can pass in the mutable
-    // reference, treating this like a function. Only defined as a closure as its purpose is solely
-    // for this function, and will be used nowhere else.
-    let write_colors = |fx: &mut BufWriter<File>, bright: bool| {
-        let shift = if bright { 8 } else { 0 };
-        for (i, color) in colors.iter().enumerate() {
-            writeln!(
-                fx,
-                "{} = {}",
-                format!("{}{}", if bright { "alt" } else { "" }, color),
-                cs.color[i + shift]
-            )
-            .unwrap();
-        }
-    };
-
-    // write color tag and background/foreground
-    writeln!(f, "[color]").unwrap();
-    writeln!(f, "background = {}", cs.background).unwrap();
-    writeln!(f, "foreground = {}", cs.foreground).unwrap();
-
-    // normal colors
-    write_colors(&mut f, false);
-
-    // bright colors
-    write_colors(&mut f, true);
 }

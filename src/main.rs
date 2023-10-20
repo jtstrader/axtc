@@ -2,7 +2,6 @@ use std::io;
 use std::process::Child;
 use std::process::Command;
 
-use anyhow::Context;
 use clap::Parser;
 
 use axtc::init_targets;
