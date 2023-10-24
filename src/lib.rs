@@ -25,7 +25,8 @@ pub enum AxtcTarget {
 /// Data structure for maintaining all colors
 #[derive(Deserialize, Debug)]
 pub struct ColorScheme<'a> {
-    _theme: &'a str,
+    #[allow(dead_code)]
+    theme: &'a str,
     color: Vec<&'a str>,
     background: &'a str,
     foreground: &'a str,
