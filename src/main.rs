@@ -7,6 +7,10 @@ use clap::Parser;
 use axtc::init_targets;
 use axtc::AxtcTarget;
 
+const HERBSTLUFTWM_PATH: &str = "~/.config/herbstluftwm/autostart";
+const POLYBAR_PATH: &str = "~/.config/polybar/config.ini";
+const ALACRITTY_PATH: &str = "~/.config/alacritty/alacritty.yml";
+
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
@@ -35,10 +39,10 @@ impl Args {
         use AxtcTarget as AXT;
 
         let [herbstluftwm_path, polybar_path, neovim_path, alacritty_path] = [
-            "~/.config/herbstluftwm/autostart",
-            "~/.config/polybar/colors.ini",
+            HERBSTLUFTWM_PATH,
+            POLYBAR_PATH,
             "---TODO---",
-            "~/.config/alacritty/alacritty.yml",
+            ALACRITTY_PATH,
         ]
         .map(simple_home_dir::expand_tilde)
         .map(Option::unwrap);
