@@ -1,5 +1,6 @@
 //! AXTC functionality.
 
+pub mod theme;
 pub mod utils;
 
 /// Save the current theme with the provided name.
