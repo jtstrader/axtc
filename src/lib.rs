@@ -1,3 +1,7 @@
+//! AXTC functionality.
+
+pub mod utils;
+
 /// Save the current theme with the provided name.
 pub fn save(new_theme_name: String) {}
 
