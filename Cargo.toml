@@ -1,0 +1,10 @@
+[package]
+name = "axtc"
+version = "0.1.0"
+description = "Arch/X theme changer"
+repository = "https://github.com/jtstrader/axtc"
+license = "MIT"
+edition = "2024"
+publish = false  # For personal use only.
+
+[dependencies]
