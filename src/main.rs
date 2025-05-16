@@ -25,13 +25,9 @@ enum Options {
 
     /// List all supported themes.
     List {
-        /// Show all themes (saved and recovered). Cannot be used with the recovery flag.
-        #[clap(long, default_value_t = false, conflicts_with = "recovery")]
-        all: bool,
-
-        /// Only show recovered themes in the listing. Cannot be used with the all flag.
-        #[clap(long, default_value_t = false, conflicts_with = "all")]
-        recovery: bool,
+        /// Change which themes are shown.
+        #[clap(short, long, default_value_t = axtc_lib::ListMode::Saved)]
+        view: axtc_lib::ListMode,
     },
 }
 
@@ -51,6 +47,6 @@ fn main() {
             unsafe_load,
             recovery,
         } => axtc_lib::load(theme, unsafe_load, recovery),
-        Options::List { all, recovery } => axtc_lib::list(all, recovery),
+        Options::List { view } => axtc_lib::list(view),
     }
 }
