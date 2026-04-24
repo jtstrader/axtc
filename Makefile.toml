@@ -15,44 +15,52 @@ dependencies = ["build-release", "lint-strict", "test", "doc-strict"]
 [tasks.build]
 description = "Build the project (debug)"
 command = "cargo"
-args = ["build", "--all-features", "--all-targets"]
+args = ["build", "--all-features", "--all-targets", "${@}"]
 
 [tasks.build-release]
 description = "Build the project (release)"
 command = "cargo"
-args = ["build", "--release", "--all-features", "--all-targets"]
+args = ["build", "--release", "--all-features", "--all-targets", "${@}"]
 
 [tasks.check]
 description = "Check the project for errors"
 command = "cargo"
-args = ["check", "--all-features", "--all-targets"]
+args = ["check", "--all-features", "--all-targets", "${@}"]
 
 [tasks.doc]
 description = "Build documentation (warnings allowed)"
 command = "cargo"
-args = ["doc", "--all-features", "--no-deps"]
+args = ["doc", "--all-features", "--no-deps", "${@}"]
 
 [tasks.doc-strict]
 description = "Build documentation (warnings are errors; for CI/pre-commit)"
 command = "cargo"
-args = ["doc", "--all-features", "--no-deps"]
+args = ["doc", "--all-features", "--no-deps", "${@}"]
 [tasks.doc-strict.env]
 RUSTDOCFLAGS = "-D warnings"
 
 [tasks.lint]
 description = "Run Clippy (warnings allowed)"
 command = "cargo"
-args = ["clippy", "--all-features", "--all-targets"]
+args = ["clippy", "--all-features", "--all-targets", "${@}"]
 
 [tasks.lint-strict]
 description = "Run Clippy (warnings are errors; for CI/pre-commit)"
 command = "cargo"
-args = ["clippy", "--all-features", "--all-targets", "--", "-D", "warnings"]
+args = [
+  "clippy",
+  "--all-features",
+  "--all-targets",
+  "${@}",
+  "--",
+  "-D",
+  "warnings",
+]
 
 [tasks.test]
 description = "Run all tests"
 command = "cargo"
-args = ["test", "--all-features"]
+args = ["test", "--all-features", "${@}"]
 
 # Aliases
 [tasks.dev]
