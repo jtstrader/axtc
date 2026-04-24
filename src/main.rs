@@ -1,52 +1,57 @@
-use clap::{Parser, Subcommand};
+use anyhow::Result;
+use clap::Parser;
 
-/// All available options for AXTC.
-#[derive(Subcommand, Debug, Clone)]
-enum Options {
-    /// Save the current theme.
-    Save {
-        /// The name of the new theme. Must not already exist in the theme list.
-        new_name: String,
-    },
+mod cli;
+use cli::{Cli, Command};
 
-    /// Load the given theme.
-    Load {
-        /// The name of the theme to load. It must exist in the theme list.
-        theme: String,
-
-        /// Load the theme without saving a copy of the current theme.
-        #[clap(name = "unsafe", long, default_value_t = false)]
-        unsafe_load: bool,
-
-        /// Include searches in the recovery section.
-        #[clap(long, default_value_t = false)]
-        recovery: bool,
-    },
-
-    /// List all supported themes.
-    List {
-        /// Change which themes are shown.
-        #[clap(short, long, default_value_t = axtc_lib::ListMode::Saved)]
-        view: axtc_lib::ListMode,
-    },
-}
-
-/// An Arch/X theme changer.
-#[derive(Parser, Debug)]
-struct Args {
-    #[clap(subcommand)]
-    opt: Options,
-}
-
-fn main() {
-    let args = Args::parse();
-    match args.opt {
-        Options::Save { new_name } => axtc_lib::save(new_name),
-        Options::Load {
-            theme,
-            unsafe_load,
-            recovery,
-        } => axtc_lib::load(theme, unsafe_load, recovery),
-        Options::List { view } => axtc_lib::list(view),
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Apply { theme } => axtc::apply::apply(&axtc::theme::Theme::load(&theme)?),
+        Command::List => list(),
+        Command::New { name } => new_theme(&name),
     }
+}
+
+fn list() -> Result<()> {
+    let themes_dir = axtc::theme::themes_dir()?;
+    if !themes_dir.exists() {
+        anyhow::bail!("themes directory not found: {}", themes_dir.display());
+    }
+    let mut themes: Vec<String> = std::fs::read_dir(&themes_dir)?
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let path = e.path();
+            let stem = path.file_stem()?.to_str()?.to_owned();
+            if path.extension()?.to_str()? == "toml" && stem != "template" {
+                Some(stem)
+            } else {
+                None
+            }
+        })
+        .collect();
+    themes.sort();
+    if themes.is_empty() {
+        println!("No themes found in {}", themes_dir.display());
+    } else {
+        for t in themes {
+            println!("{t}");
+        }
+    }
+    Ok(())
+}
+
+fn new_theme(name: &str) -> Result<()> {
+    let themes_dir = axtc::theme::themes_dir()?;
+    let template_path = themes_dir.join("template.toml");
+    let dest_path = themes_dir.join(format!("{name}.toml"));
+    anyhow::ensure!(
+        template_path.exists(),
+        "template.toml not found in {}",
+        themes_dir.display()
+    );
+    anyhow::ensure!(!dest_path.exists(), "theme '{name}' already exists");
+    std::fs::copy(&template_path, &dest_path)?;
+    println!("Created {}", dest_path.display());
+    Ok(())
 }

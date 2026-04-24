@@ -1,0 +1,101 @@
+# axtc theme template
+# Copy this file and fill in your values:
+#   axtc new <theme-name>
+#
+# All fields are optional except `name`. Omit any section for apps you
+# don't use — axtc silently skips sections absent from the TOML.
+
+# ---------------------------------------------------------------------------
+# Metadata
+# ---------------------------------------------------------------------------
+
+name        = "template"
+description = "Base template — copy and customize"
+
+# ---------------------------------------------------------------------------
+# Global settings
+# Shared defaults; per-app sections override these when set.
+# ---------------------------------------------------------------------------
+
+[global]
+font = "FiraCode"   # Font family used across all apps (alacritty, polybar, herbstluftwm)
+
+# ---------------------------------------------------------------------------
+# ANSI color palette
+# Used by: alacritty, other terminal emulators
+# ---------------------------------------------------------------------------
+
+[ansi.primary]
+foreground = "#e0e0e0"   # Default text color
+background = "#1a1a2e"   # Terminal background
+cursor     = "#ffffff"   # Cursor color
+
+[ansi.normal]
+# The 8 standard ANSI colors (indices 0–7)
+black   = "#0d0d0d"
+red     = "#e06c75"
+green   = "#98c379"
+yellow  = "#e5c07b"
+blue    = "#61afef"
+magenta = "#c678dd"
+cyan    = "#56b6c2"
+white   = "#abb2bf"
+
+[ansi.bright]
+# The 8 bright ANSI colors (indices 8–15)
+black   = "#5c6370"
+red     = "#e06c75"
+green   = "#98c379"
+yellow  = "#e5c07b"
+blue    = "#61afef"
+magenta = "#c678dd"
+cyan    = "#56b6c2"
+white   = "#ffffff"
+
+# ---------------------------------------------------------------------------
+# herbstluftwm — tiling window manager
+# Template: ~/.config/axtc/templates/herbstluftwm/autostart.tera
+# Output:   ~/.config/herbstluftwm/autostart
+# ---------------------------------------------------------------------------
+
+[herbstluftwm]
+borders        = true          # Render window and frame borders
+transparency   = false         # Enable transparency (requires picom)
+terminal       = "alacritty"   # Terminal emulator spawned by keybind
+# background_src = "~/Pictures/Wallpapers/example.png"   # Wallpaper path for nitrogen
+
+# ---------------------------------------------------------------------------
+# polybar — status bar
+# Template: ~/.config/axtc/templates/polybar/config.ini.tera
+# Output:   ~/.config/polybar/config.ini
+# ---------------------------------------------------------------------------
+
+[polybar]
+position         = "top"                                              # "top" or "bottom"
+height           = 24                                                 # Bar height in points
+# font           = "firacode:fontformat=truetype:style=Semibold:size=12;2"
+# primary_color  = "#ff8da1"                                         # Accent color for labels/icons
+# background_alt = "#2b1046"                                         # Active workspace background
+
+# ---------------------------------------------------------------------------
+# alacritty — GPU-accelerated terminal emulator
+# Template: ~/.config/axtc/templates/alacritty/alacritty.toml.tera
+# Output:   ~/.config/alacritty/alacritty.toml
+# ---------------------------------------------------------------------------
+
+[alacritty]
+# font       = "FiraCode"   # Font family
+# font_style = "SemiBold"   # Font style (default: SemiBold)
+font_size = 12.0            # Font size in points
+opacity   = 1.0             # Window opacity (0.0–1.0)
+
+# ---------------------------------------------------------------------------
+# picom — X11 compositor (transparency, blur, shadows, rounded corners)
+# Template: ~/.config/axtc/templates/picom/picom.conf.tera
+# Output:   ~/.config/picom/picom.conf
+# ---------------------------------------------------------------------------
+
+[picom]
+transparency  = false   # Enable per-window inactive opacity
+blur          = false   # Enable background blur (dual_kawase)
+corner_radius = 0       # Window corner radius in pixels (0 = disabled)
