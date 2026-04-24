@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, sandbox]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-make
+        run: cargo install cargo-make --locked
+
+      - name: Build (release)
+        id: build
+        run: cargo make build-release
+
+      - name: Lint
+        if: steps.build.outcome == 'success'
+        run: cargo make lint-strict
+
+      - name: Test
+        if: steps.build.outcome == 'success'
+        run: cargo make test
+
+      - name: Doc
+        if: steps.build.outcome == 'success'
+        run: cargo make doc-strict
