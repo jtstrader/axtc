@@ -193,7 +193,7 @@ blur = false
         let primary = ansi.primary.unwrap();
         assert_eq!(primary.foreground.unwrap(), "#e0e0e0");
         let hlwm = theme.herbstluftwm.unwrap();
-        assert_eq!(hlwm.borders.unwrap(), true);
+        assert!(hlwm.borders.unwrap());
     }
 
     #[test]
