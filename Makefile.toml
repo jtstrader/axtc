@@ -8,6 +8,10 @@ alias = "dev-flow"
 description = "Run build, lint, test, and doc"
 dependencies = ["build", "lint", "test", "doc"]
 
+[tasks.ci-flow]
+description = "Run build-release, lint-strict, test, and doc-strict (mirrors CI)"
+dependencies = ["build-release", "lint-strict", "test", "doc-strict"]
+
 [tasks.build]
 description = "Build the project (debug)"
 command = "cargo"
@@ -51,6 +55,12 @@ command = "cargo"
 args = ["test", "--all-features"]
 
 # Aliases
+[tasks.dev]
+alias = "dev-flow"
+
+[tasks.ci]
+alias = "ci-flow"
+
 [tasks.b]
 alias = "build"
 
