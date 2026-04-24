@@ -1,8 +1,40 @@
 //! Theme configuration types, mirroring the structure of a theme TOML file.
+//!
+//! Each struct corresponds to one TOML section. All fields are optional at the
+//! TOML level (represented as `Option<_>`) — the application is silently
+//! skipped if its top-level section is absent from the file.
+//!
+//! | TOML section       | Struct                  | Tera root path      |
+//! |--------------------|-------------------------|---------------------|
+//! | `[global]`         | [`GlobalConfig`]        | `global.*`          |
+//! | `[ansi.*]`         | [`AnsiConfig`]          | `ansi.*`            |
+//! | `[herbstluftwm]`   | [`HerbstluftwmConfig`]  | `herbstluftwm.*`    |
+//! | `[polybar]`        | [`PolybarConfig`]       | `polybar.*`         |
+//! | `[alacritty]`      | [`AlacrittyConfig`]     | `alacritty.*`       |
+//! | `[picom]`          | [`PicomConfig`]         | `picom.*`           |
 
 use serde::{Deserialize, Serialize};
 
 /// Top-level theme definition loaded from a TOML file.
+///
+/// # TOML
+///
+/// ```toml
+/// name        = "my-theme"
+/// description = "Optional description"
+///
+/// [global]      # → global.*
+/// [ansi.primary]
+/// [ansi.normal]
+/// [ansi.bright]
+/// [herbstluftwm]
+/// [polybar]
+/// [alacritty]
+/// [picom]
+/// ```
+///
+/// Only `name` is required. Any section may be omitted; the corresponding
+/// application is silently skipped during `axtc apply`.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Theme {
     /// Unique theme name used to load it by key.
@@ -24,6 +56,21 @@ pub struct Theme {
 }
 
 /// Settings shared across all app configs (e.g. font family, terminal).
+///
+/// # TOML
+///
+/// ```toml
+/// [global]
+/// font = "FiraCode"
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// {% if global and global.font %}
+/// font-family = "{{ global.font }}"
+/// {% endif %}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GlobalConfig {
     /// Font family used as the default across alacritty, polybar, and herbstluftwm.
@@ -32,6 +79,38 @@ pub struct GlobalConfig {
 }
 
 /// ANSI terminal color palette, split into primary, normal, and bright groups.
+///
+/// # TOML
+///
+/// ```toml
+/// [ansi.primary]
+/// foreground = "#e0e0e0"
+/// background = "#1a1a2e"
+/// cursor     = "#ffffff"
+///
+/// [ansi.normal]
+/// black = "#0d0d0d"
+/// red   = "#e06c75"
+/// # … green, yellow, blue, magenta, cyan, white
+///
+/// [ansi.bright]
+/// black = "#5c6370"
+/// # … same keys as [ansi.normal]
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// {% if ansi and ansi.primary %}
+/// background = "{{ ansi.primary.background | default(value="#1a1a2e") }}"
+/// foreground = "{{ ansi.primary.foreground | default(value="#e0e0e0") }}"
+/// {% endif %}
+///
+/// {% if ansi and ansi.normal %}
+/// red  = "{{ ansi.normal.red  | default(value="#e06c75") }}"
+/// blue = "{{ ansi.normal.blue | default(value="#61afef") }}"
+/// {% endif %}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AnsiConfig {
     /// Background, foreground, and cursor colors.
@@ -96,6 +175,32 @@ pub struct BrightColors {
 }
 
 /// herbstluftwm window manager configuration.
+///
+/// # TOML
+///
+/// ```toml
+/// [herbstluftwm]
+/// borders        = true
+/// transparency   = false
+/// terminal       = "alacritty"
+/// background_src = "~/Pictures/Wallpapers/forest.png"
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// {% if herbstluftwm.borders %}
+/// hc set window_border_width 2
+/// {% endif %}
+///
+/// {% if herbstluftwm.background_src %}
+/// nitrogen --set-zoom-fill "{{ herbstluftwm.background_src }}"
+/// {% else %}
+/// nitrogen --restore
+/// {% endif %}
+///
+/// hc spawn {{ herbstluftwm.terminal | default(value="alacritty") }}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HerbstluftwmConfig {
     /// Whether window and frame borders are rendered.
@@ -110,6 +215,34 @@ pub struct HerbstluftwmConfig {
 }
 
 /// polybar status-bar configuration.
+///
+/// # TOML
+///
+/// ```toml
+/// [polybar]
+/// position         = "top"
+/// height           = 24
+/// font             = "firacode:fontformat=truetype:style=Semibold:size=12;2"
+/// primary_color    = "#ff8da1"
+/// background_alt   = "#2b1046"
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// [bar/bar]
+/// bottom = {{ polybar.position | default(value="top") == "bottom" }}
+/// height = {{ polybar.height   | default(value=24) }}
+///
+/// {% if polybar.font %}
+/// font-0 = "{{ polybar.font }}"
+/// {% elif global and global.font %}
+/// font-0 = "{{ global.font }}:size=12;2"
+/// {% endif %}
+///
+/// background = {{ ansi.primary.background | default(value="#1a1a2e") }}
+/// foreground = {{ ansi.primary.foreground | default(value="#e0e0e0") }}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PolybarConfig {
     /// Bar position: `"top"` or `"bottom"`.
@@ -128,6 +261,33 @@ pub struct PolybarConfig {
 }
 
 /// Alacritty terminal emulator configuration.
+///
+/// # TOML
+///
+/// ```toml
+/// [alacritty]
+/// font       = "FiraCode"
+/// font_style = "SemiBold"
+/// font_size  = 12.0
+/// opacity    = 1.0
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// [font]
+/// size = {{ alacritty.font_size | default(value=12.0) }}
+///
+/// {# app font takes priority over global font #}
+/// {% if alacritty and alacritty.font %}
+/// normal = { family = "{{ alacritty.font }}", style = "{{ alacritty.font_style | default(value="SemiBold") }}" }
+/// {% elif global and global.font %}
+/// normal = { family = "{{ global.font }}",    style = "{{ alacritty.font_style | default(value="SemiBold") }}" }
+/// {% endif %}
+///
+/// [window]
+/// opacity = {{ alacritty.opacity | default(value=1.0) }}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AlacrittyConfig {
     /// Font family name (e.g. `"FiraCode"`).
@@ -142,6 +302,32 @@ pub struct AlacrittyConfig {
 }
 
 /// picom compositor configuration.
+///
+/// # TOML
+///
+/// ```toml
+/// [picom]
+/// transparency  = false
+/// blur          = true
+/// corner_radius = 8
+/// ```
+///
+/// # Tera
+///
+/// ```text
+/// corner-radius = {{ picom.corner_radius | default(value=0) }};
+///
+/// {% if picom.transparency %}
+/// inactive-opacity = 0.9;
+/// {% else %}
+/// inactive-opacity = 1.0;
+/// {% endif %}
+///
+/// {% if picom.blur %}
+/// blur-method = "dual_kawase";
+/// blur-size    = 12;
+/// {% endif %}
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PicomConfig {
     /// Enable per-window inactive opacity (sets `inactive-opacity = 0.9`).
