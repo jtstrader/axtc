@@ -1,14 +1,30 @@
-name: CI
+name: ci
 
 on:
   push:
     branches: [main, dev, sandbox]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ci.yml"
+      - "templates/**/*.tera"
+      - "themes/**/*.toml"
   pull_request:
     branches: [main, dev]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/ci.yml"
+      - "templates/**/*.tera"
+      - "themes/**/*.toml"
 
 jobs:
   ci:
-    name: CI
+    name: build axtc
     runs-on: ubuntu-latest
 
     steps:
