@@ -24,7 +24,7 @@ on:
 
 jobs:
   ci:
-    name: build axtc
+    name: build
     runs-on: ubuntu-latest
 
     steps:
