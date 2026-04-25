@@ -182,8 +182,4 @@ nitrogen --restore &
 
 hc spawn picom
 
-panel=~/.config/herbstluftwm/panel.sh
-[ -x "$panel" ] || panel=/etc/xdg/herbstluftwm/panel.sh
-for monitor in $(hc list_monitors | cut -d: -f1) ; do
-    "$panel" "$monitor" &
-done
+python3 ~/.config/polybar/launch.py &

@@ -160,5 +160,5 @@ fn picom_always_spawned() {
 #[test]
 fn panel_sh_always_launched() {
     let out = render(&template_path(), &minimal_theme()).unwrap();
-    assert!(out.contains("panel=~/.config/herbstluftwm/panel.sh"));
+    assert!(out.contains("python3 ~/.config/polybar/launch.py"));
 }

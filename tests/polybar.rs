@@ -177,7 +177,7 @@ fn falls_back_to_hardcoded_default_font() {
 fn all_module_sections_present() {
     let out = render(&template_path(), &minimal_theme()).unwrap();
     for section in &[
-        "[module/xworkspaces]",
+        "[module/tags]",
         "[module/xwindow]",
         "[module/filesystem]",
         "[module/pulseaudio]",
@@ -193,6 +193,6 @@ fn all_module_sections_present() {
 #[test]
 fn modules_listed_in_bar() {
     let out = render(&template_path(), &minimal_theme()).unwrap();
-    assert!(out.contains("modules-left  = xworkspaces xwindow"));
+    assert!(out.contains("modules-left  = tags xwindow"));
     assert!(out.contains("modules-right = filesystem pulseaudio memory cpu eth date"));
 }
