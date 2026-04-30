@@ -1,0 +1,78 @@
+# axtc theme: neon 
+# Deep black background with vivid neon accents.
+
+name = "neon"
+description = "Neon controller — deep black with vivid neon red, blue, green, and yellow"
+
+# ---------------------------------------------------------------------------
+# Global
+# ---------------------------------------------------------------------------
+
+[global]
+font = "FiraCode"
+
+# ---------------------------------------------------------------------------
+# ANSI color palette
+# ---------------------------------------------------------------------------
+
+[ansi.primary]
+background = "#080808" # Near-pure black — matches the wallpaper field
+foreground = "#dcdcdc" # Soft white; legible without washing out the neons
+cursor = "#ff1a3e"     # Neon red cursor
+
+[ansi.normal]
+black = "#121212"
+red = "#ff1a3e"     # Neon red
+green = "#00ff41"   # Neon green
+yellow = "#ffe600"  # Neon yellow
+blue = "#0090ff"    # Neon blue
+magenta = "#ff00aa" # Neon pink — mirrors the controller's left-side glow
+cyan = "#00deff"    # Neon cyan — mirrors the controller's bottom teal glow
+white = "#c0c0c0"
+
+[ansi.bright]
+black = "#2e2e2e"
+red = "#ff5577"     # Lighter neon red (dimmed/inactive states)
+green = "#39ff5e"   # Brighter neon green
+yellow = "#ffef44"  # Brighter neon yellow
+blue = "#44b0ff"    # Lighter neon blue
+magenta = "#ff44cc" # Lighter neon pink
+cyan = "#44eeff"    # Lighter neon cyan
+white = "#ffffff"
+
+# ---------------------------------------------------------------------------
+# herbstluftwm
+# ---------------------------------------------------------------------------
+
+[herbstluftwm]
+borders = true
+transparency = true
+terminal = "alacritty"
+background_src = "~/Pictures/Wallpapers/controller.png"
+
+# ---------------------------------------------------------------------------
+# polybar
+# ---------------------------------------------------------------------------
+
+[polybar]
+position = "top"
+height = 24
+primary_color = "#ff1a3e"  # Neon red accent for labels/icons
+background_alt = "#0d0d1a" # Dark blue-black for active workspace highlight
+
+# ---------------------------------------------------------------------------
+# alacritty
+# ---------------------------------------------------------------------------
+
+[alacritty]
+font_size = 12.0
+opacity = 0.92   # Slight transparency — the black background makes this subtle
+
+# ---------------------------------------------------------------------------
+# picom
+# ---------------------------------------------------------------------------
+
+[picom]
+transparency = true
+blur = true
+corner_radius = 6
