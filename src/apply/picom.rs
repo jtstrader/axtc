@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::theme::Theme;
 
-pub fn apply(theme: &Theme) -> Result<()> {
+pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
     if theme.picom.is_none() {
         return Ok(());
     }
@@ -18,7 +18,7 @@ pub fn apply(theme: &Theme) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("could not determine config directory"))?
         .join("picom")
         .join("picom.conf");
-    super::backup_and_write(&target, &rendered, "picom")?;
+    super::backup_and_write(&target, &rendered, "picom", dry_run)?;
     println!("[picom] applied");
     Ok(())
 }

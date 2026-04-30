@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::theme::Theme;
 
-pub fn apply(theme: &Theme) -> Result<()> {
+pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
     if theme.polybar.is_none() {
         return Ok(());
     }
@@ -22,17 +22,17 @@ pub fn apply(theme: &Theme) -> Result<()> {
 
     if let Some(rendered) = render("config.ini.tera") {
         let target = config_dir.join("polybar").join("config.ini");
-        super::backup_and_write(&target, &rendered?, "polybar")?;
+        super::backup_and_write(&target, &rendered?, "polybar", dry_run)?;
     }
 
     if let Some(rendered) = render("launch.py.tera") {
         let target = config_dir.join("polybar").join("launch.py");
-        super::backup_and_write(&target, &rendered?, "polybar")?;
+        super::backup_and_write(&target, &rendered?, "polybar", dry_run)?;
     }
 
     if let Some(rendered) = render("scripts/tags.py.tera") {
         let target = config_dir.join("polybar").join("scripts").join("tags.py");
-        super::backup_and_write(&target, &rendered?, "polybar")?;
+        super::backup_and_write(&target, &rendered?, "polybar", dry_run)?;
     }
 
     println!("[polybar] applied");

@@ -7,7 +7,14 @@ use cli::{Cli, Command};
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Command::Apply { theme } => axtc::apply::apply(&axtc::theme::Theme::load(&theme)?),
+        Command::Apply { theme, file, dry_run } => {
+            let loaded = match (theme, file) {
+                (Some(name), None) => axtc::theme::Theme::load(&name)?,
+                (None, Some(p)) => axtc::theme::Theme::load_from_path(&p)?,
+                _ => unreachable!(),
+            };
+            axtc::apply::apply(&loaded, dry_run)
+        }
         Command::List => list(),
         Command::New { name } => new_theme(&name),
     }

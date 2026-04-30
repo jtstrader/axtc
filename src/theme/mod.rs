@@ -7,7 +7,7 @@ pub use config::{
 };
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Returns the path to the user's axtc themes directory (`$XDG_CONFIG_HOME/axtc/themes`).
 pub fn themes_dir() -> Result<PathBuf> {
@@ -24,5 +24,13 @@ impl Theme {
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("theme '{name}' not found at {}", path.display()))?;
         toml::from_str(&content).with_context(|| format!("failed to parse theme '{name}'"))
+    }
+
+    /// Load and deserialize a theme from an explicit file path.
+    pub fn load_from_path(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("could not read theme file '{}'", path.display()))?;
+        toml::from_str(&content)
+            .with_context(|| format!("failed to parse theme from '{}'", path.display()))
     }
 }

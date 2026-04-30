@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::theme::Theme;
 
-pub fn apply(theme: &Theme) -> Result<()> {
+pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
     if theme.alacritty.is_none() {
         return Ok(());
     }
@@ -18,7 +18,7 @@ pub fn apply(theme: &Theme) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("could not determine config directory"))?
         .join("alacritty")
         .join("alacritty.toml");
-    super::backup_and_write(&target, &rendered, "alacritty")?;
+    super::backup_and_write(&target, &rendered, "alacritty", dry_run)?;
     println!("[alacritty] applied");
     Ok(())
 }

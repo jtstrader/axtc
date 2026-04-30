@@ -14,12 +14,20 @@ use crate::theme::Theme;
 ///
 /// Apps whose section is absent from the theme are silently skipped.
 /// Existing config files are backed up before being overwritten.
-pub fn apply(theme: &Theme) -> Result<()> {
-    println!("Applying theme '{}'...", theme.name);
-    herbstluftwm::apply(theme)?;
-    polybar::apply(theme)?;
-    alacritty::apply(theme)?;
-    picom::apply(theme)?;
+///
+/// When `dry_run` is `true`, rendered output is written to the same relative
+/// path under the current directory instead of the real config locations, and
+/// no backups are created.
+pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
+    if dry_run {
+        println!("Dry-run: rendering theme '{}' into current directory...", theme.name);
+    } else {
+        println!("Applying theme '{}'...", theme.name);
+    }
+    herbstluftwm::apply(theme, dry_run)?;
+    polybar::apply(theme, dry_run)?;
+    alacritty::apply(theme, dry_run)?;
+    picom::apply(theme, dry_run)?;
     println!("Done.");
     Ok(())
 }
@@ -35,7 +43,20 @@ fn template_path(app: &str, filename: &str) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn backup_and_write(target: &Path, content: &str, app: &str) -> Result<()> {
+fn backup_and_write(target: &Path, content: &str, app: &str, dry_run: bool) -> Result<()> {
+    if dry_run {
+        let config_dir = dirs::config_dir().context("could not determine config directory")?;
+        let rel = target.strip_prefix(&config_dir).unwrap_or(target);
+        let dest = std::path::Path::new(".").join(rel);
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(&dest, content)
+            .with_context(|| format!("could not write '{}'", dest.display()))?;
+        println!("  [dry-run] {}", dest.display());
+        return Ok(());
+    }
+
     if target.exists() {
         let backup_dir = dirs::config_dir()
             .context("could not determine config directory")?
