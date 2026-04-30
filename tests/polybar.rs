@@ -9,6 +9,14 @@ fn template_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("templates/polybar/config.ini.tera")
 }
 
+fn launch_template_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("templates/polybar/launch.py.tera")
+}
+
+fn tags_template_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("templates/polybar/scripts/tags.py.tera")
+}
+
 fn minimal_theme() -> Theme {
     Theme {
         name: "test".into(),
@@ -195,4 +203,72 @@ fn modules_listed_in_bar() {
     let out = render(&template_path(), &minimal_theme()).unwrap();
     assert!(out.contains("modules-left  = tags xwindow"));
     assert!(out.contains("modules-right = filesystem pulseaudio memory cpu eth date"));
+}
+
+// ── launch.py ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn launch_py_kills_polybar() {
+    let out = render(&launch_template_path(), &minimal_theme()).unwrap();
+    assert!(out.contains("killall"));
+    assert!(out.contains("polybar"));
+}
+
+#[test]
+fn launch_py_reads_monitor_from_xrandr() {
+    let out = render(&launch_template_path(), &minimal_theme()).unwrap();
+    assert!(out.contains("xrandr"));
+}
+
+// ── scripts/tags.py ───────────────────────────────────────────────────────────
+
+#[test]
+fn tags_py_defaults_when_ansi_absent() {
+    let out = render(&tags_template_path(), &minimal_theme()).unwrap();
+    assert!(out.contains("#d0b360"), "expected default occupied color");
+    assert!(out.contains("#f1c40f"), "expected default focused color");
+}
+
+#[test]
+fn tags_py_uses_ansi_normal_yellow_for_occupied() {
+    let mut theme = minimal_theme();
+    theme.ansi = Some(AnsiConfig {
+        primary: None,
+        normal: Some(NormalColors {
+            black: None,
+            red: None,
+            green: None,
+            yellow: Some("#aabbcc".into()),
+            blue: None,
+            magenta: None,
+            cyan: None,
+            white: None,
+        }),
+        bright: None,
+    });
+    let out = render(&tags_template_path(), &theme).unwrap();
+    assert!(out.contains("OCCUPIED:         \"#aabbcc\""));
+    assert!(out.contains("FOCUSED_INACTIVE: \"#aabbcc\""));
+}
+
+#[test]
+fn tags_py_uses_ansi_bright_yellow_for_focused() {
+    let mut theme = minimal_theme();
+    theme.ansi = Some(AnsiConfig {
+        primary: None,
+        normal: None,
+        bright: Some(BrightColors {
+            black: None,
+            red: None,
+            green: None,
+            yellow: Some("#ddeeff".into()),
+            blue: None,
+            magenta: None,
+            cyan: None,
+            white: None,
+        }),
+    });
+    let out = render(&tags_template_path(), &theme).unwrap();
+    assert!(out.contains("FOCUSED_ACTIVE:   \"#ddeeff\""));
+    assert!(out.contains("OTHER_FOCUSED:    \"#ddeeff\""));
 }

@@ -6,19 +6,35 @@ pub fn apply(theme: &Theme) -> Result<()> {
     if theme.polybar.is_none() {
         return Ok(());
     }
-    let template = match super::template_path("polybar", "config.ini.tera") {
-        Ok(p) => p,
-        Err(_) => {
-            eprintln!("[polybar] template not found, skipping");
-            return Ok(());
+
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| anyhow::anyhow!("could not determine config directory"))?;
+
+    let render = |tpl: &str| -> Option<Result<String>> {
+        match super::template_path("polybar", tpl) {
+            Ok(p) => Some(crate::template::render(&p, theme)),
+            Err(_) => {
+                eprintln!("[polybar] template '{tpl}' not found, skipping");
+                None
+            }
         }
     };
-    let rendered = crate::template::render(&template, theme)?;
-    let target = dirs::config_dir()
-        .ok_or_else(|| anyhow::anyhow!("could not determine config directory"))?
-        .join("polybar")
-        .join("config.ini");
-    super::backup_and_write(&target, &rendered, "polybar")?;
+
+    if let Some(rendered) = render("config.ini.tera") {
+        let target = config_dir.join("polybar").join("config.ini");
+        super::backup_and_write(&target, &rendered?, "polybar")?;
+    }
+
+    if let Some(rendered) = render("launch.py.tera") {
+        let target = config_dir.join("polybar").join("launch.py");
+        super::backup_and_write(&target, &rendered?, "polybar")?;
+    }
+
+    if let Some(rendered) = render("scripts/tags.py.tera") {
+        let target = config_dir.join("polybar").join("scripts").join("tags.py");
+        super::backup_and_write(&target, &rendered?, "polybar")?;
+    }
+
     println!("[polybar] applied");
     Ok(())
 }
