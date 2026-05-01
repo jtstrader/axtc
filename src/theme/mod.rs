@@ -7,20 +7,14 @@ pub use config::{
 };
 
 use anyhow::{Context, Result};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-/// Returns the path to the user's axtc themes directory (`$XDG_CONFIG_HOME/axtc/themes`).
-pub fn themes_dir() -> Result<PathBuf> {
-    Ok(dirs::config_dir()
-        .context("could not determine config directory")?
-        .join("axtc")
-        .join("themes"))
-}
+use crate::constants::THEMES_DIR;
 
 impl Theme {
     /// Load and deserialize a theme by name from the user's themes directory.
     pub fn load(name: &str) -> Result<Self> {
-        let path = themes_dir()?.join(format!("{name}.toml"));
+        let path = THEMES_DIR.join(format!("{name}.toml"));
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("theme '{name}' not found at {}", path.display()))?;
         toml::from_str(&content).with_context(|| format!("failed to parse theme '{name}'"))

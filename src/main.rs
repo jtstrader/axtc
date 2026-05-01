@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
 
+use axtc::constants::THEMES_DIR;
+
 mod cli;
 use cli::{Cli, Command};
 
@@ -21,11 +23,10 @@ fn main() -> Result<()> {
 }
 
 fn list() -> Result<()> {
-    let themes_dir = axtc::theme::themes_dir()?;
-    if !themes_dir.exists() {
-        anyhow::bail!("themes directory not found: {}", themes_dir.display());
+    if !THEMES_DIR.exists() {
+        anyhow::bail!("themes directory not found: {}", THEMES_DIR.display());
     }
-    let mut themes: Vec<String> = std::fs::read_dir(&themes_dir)?
+    let mut themes: Vec<String> = std::fs::read_dir(THEMES_DIR.as_path())?
         .filter_map(|e| e.ok())
         .filter_map(|e| {
             let path = e.path();
@@ -39,7 +40,7 @@ fn list() -> Result<()> {
         .collect();
     themes.sort();
     if themes.is_empty() {
-        println!("No themes found in {}", themes_dir.display());
+        println!("No themes found in {}", THEMES_DIR.display());
     } else {
         for t in themes {
             println!("{t}");
@@ -49,13 +50,12 @@ fn list() -> Result<()> {
 }
 
 fn new_theme(name: &str) -> Result<()> {
-    let themes_dir = axtc::theme::themes_dir()?;
-    let template_path = themes_dir.join("template.toml");
-    let dest_path = themes_dir.join(format!("{name}.toml"));
+    let template_path = THEMES_DIR.join("template.toml");
+    let dest_path = THEMES_DIR.join(format!("{name}.toml"));
     anyhow::ensure!(
         template_path.exists(),
         "template.toml not found in {}",
-        themes_dir.display()
+        THEMES_DIR.display()
     );
     anyhow::ensure!(!dest_path.exists(), "theme '{name}' already exists");
     std::fs::copy(&template_path, &dest_path)?;

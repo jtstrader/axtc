@@ -9,6 +9,7 @@ use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use strum::IntoEnumIterator;
 
+use crate::constants::{CONFIG_DIR, TEMPLATES_DIR};
 use crate::theme::Theme;
 
 /// An application managed by axtc.
@@ -63,12 +64,7 @@ fn apply_theme(app: App, theme: &Theme, dry_run: bool) -> Result<()> {
 }
 
 fn template_path(app: &str, filename: &str) -> Result<PathBuf> {
-    let path = dirs::config_dir()
-        .context("could not determine config directory")?
-        .join("axtc")
-        .join("templates")
-        .join(app)
-        .join(filename);
+    let path = TEMPLATES_DIR.join(app).join(filename);
     anyhow::ensure!(path.exists(), "template not found: {}", path.display());
     Ok(path)
 }
@@ -85,8 +81,7 @@ fn backup_and_write(rel: &Path, content: &str, dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
-    let config_dir = dirs::config_dir().context("could not determine config directory")?;
-    let target = config_dir.join(rel);
+    let target = CONFIG_DIR.join(rel);
 
     if target.exists() {
         let app_name = rel
@@ -94,7 +89,7 @@ fn backup_and_write(rel: &Path, content: &str, dry_run: bool) -> Result<()> {
             .next()
             .map(|c| c.as_os_str().to_string_lossy().into_owned())
             .unwrap_or_else(|| "unknown".to_owned());
-        let backup_dir = config_dir.join("axtc").join("backups").join(&app_name);
+        let backup_dir = CONFIG_DIR.join("axtc").join("backups").join(&app_name);
         std::fs::create_dir_all(&backup_dir)?;
 
         let filename = target.file_name().unwrap().to_string_lossy();

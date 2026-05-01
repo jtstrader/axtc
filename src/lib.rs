@@ -73,5 +73,6 @@
 #![deny(missing_docs)]
 
 pub mod apply;
+pub mod constants;
 pub mod template;
 pub mod theme;
