@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use anyhow::Result;
 
 use crate::theme::Theme;
@@ -14,11 +16,7 @@ pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
         }
     };
     let rendered = crate::template::render(&template, theme)?;
-    let target = dirs::config_dir()
-        .ok_or_else(|| anyhow::anyhow!("could not determine config directory"))?
-        .join("picom")
-        .join("picom.conf");
-    super::backup_and_write(&target, &rendered, "picom", dry_run)?;
+    super::backup_and_write(Path::new("picom/picom.conf"), &rendered, dry_run)?;
     println!("[picom] applied");
     Ok(())
 }
