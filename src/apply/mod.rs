@@ -46,7 +46,13 @@ fn template_path(app: &str, filename: &str) -> Result<PathBuf> {
 fn backup_and_write(target: &Path, content: &str, app: &str, dry_run: bool) -> Result<()> {
     if dry_run {
         let config_dir = dirs::config_dir().context("could not determine config directory")?;
-        let rel = target.strip_prefix(&config_dir).unwrap_or(target);
+        let rel = target.strip_prefix(&config_dir).with_context(|| {
+            format!(
+                "dry-run: target '{}' is not under config dir '{}'",
+                target.display(),
+                config_dir.display()
+            )
+        })?;
         let dest = std::path::Path::new(".").join(rel);
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
