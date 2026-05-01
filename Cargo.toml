@@ -13,4 +13,5 @@ clap = { version = "4", features = ["derive"] }
 dirs = "6"
 serde = { version = "1", features = ["derive"] }
 tera = "1"
-toml = "0.8"
+strum = { version = "0.28", features = ["derive"] }
+toml = "1.1"
