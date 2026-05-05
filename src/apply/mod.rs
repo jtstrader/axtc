@@ -1,16 +1,17 @@
 //! Applies a theme by rendering each app's template and writing the output to its config path.
 
-mod alacritty;
-mod herbstluftwm;
-mod picom;
-mod polybar;
-
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use strum::IntoEnumIterator;
 
 use crate::constants::{CONFIG_DIR, TEMPLATES_DIR};
 use crate::theme::Theme;
+
+/// A writeable theme that has been processed by Tera.
+pub struct WriteableTheme {
+    pub(crate) content: String,
+    pub(crate) rel_path: PathBuf,
+}
 
 /// An application managed by axtc.
 #[derive(Clone, Copy, Debug, strum::Display, strum::EnumIter)]
@@ -26,92 +27,107 @@ pub enum App {
     Picom,
 }
 
+impl App {
+    /// Get the relative path to a series of config files based on the app type.
+    pub fn get_config_file_rel_paths(&self) -> Vec<PathBuf> {
+        let prefix = self.to_string();
+        match self {
+            Self::Herbstluftwm => vec!["autostart"],
+            Self::Alacritty => vec!["alacritty.toml"],
+            Self::Polybar => vec!["config.ini", "launch.py", "scripts/tags.py"],
+            Self::Picom => vec!["picom.conf"],
+        }
+        .into_iter()
+        .map(|p| Path::new(&prefix).join(PathBuf::from(p)))
+        .collect()
+    }
+
+    /// Attempt to render all configs associated with an application. If a theme template is missing
+    /// it is silently ignored. However, if one of the templates exists and fails to render
+    /// correctly an error is returned instead.
+    pub fn render_theme(&self, theme: &Theme) -> Result<Vec<WriteableTheme>> {
+        let found_templates = self.get_config_file_rel_paths().into_iter().flat_map(|p| {
+            let t = TEMPLATES_DIR.join(&p).with_added_extension("tera");
+            if !t.exists() || !t.is_file() {
+                println!("[{}] template '{}' not found, skipping", *self, p.display());
+                return None;
+            }
+            Some((p, t))
+        });
+
+        let mut files = vec![];
+        for (rel_path, tpl) in found_templates {
+            files.push(WriteableTheme {
+                content: crate::template::render(&tpl, theme)?,
+                rel_path,
+            });
+        }
+
+        Ok(files)
+    }
+}
+
 /// Render and write config files for all apps present in `theme`.
 ///
 /// Apps whose section is absent from the theme are silently skipped.
 /// Existing config files are backed up before being overwritten.
 ///
-/// When `dry_run` is `true`, rendered output is written to the same relative
+/// When in "dry run" mode, rendered output is written to the same relative
 /// path under the current directory instead of the real config locations, and
 /// no backups are created.
 pub fn apply(theme: &Theme, dry_run: bool) -> Result<()> {
-    if dry_run {
-        println!(
-            "Dry-run: rendering theme '{}' into current directory...",
-            theme.name
-        );
-    } else {
-        println!("Applying theme '{}'...", theme.name);
+    let writeable_cfgs = App::iter()
+        .map(|app| (app, app.render_theme(theme)))
+        .collect::<Vec<_>>();
+
+    for (app, cfg_list) in writeable_cfgs {
+        for cfg in cfg_list? {
+            backup_and_write(app, &cfg.rel_path, &cfg.content, dry_run)?;
+        }
     }
 
-    App::iter().for_each(|app| {
-        if let Err(e) = apply_theme(app, theme, dry_run) {
-            eprintln!("[{}] error: {e}", app);
-        }
-    });
-
-    println!("Done.");
     Ok(())
 }
 
-fn apply_theme(app: App, theme: &Theme, dry_run: bool) -> Result<()> {
-    match app {
-        App::Herbstluftwm => herbstluftwm::apply(theme, dry_run),
-        App::Polybar => polybar::apply(theme, dry_run),
-        App::Alacritty => alacritty::apply(theme, dry_run),
-        App::Picom => picom::apply(theme, dry_run),
-    }
-}
+fn backup_and_write(app: App, rel: &Path, content: &str, dry_run: bool) -> Result<()> {
+    let dest = match dry_run {
+        true => Path::new(".").join(rel),
+        false => CONFIG_DIR.join(rel),
+    };
 
-fn template_path(app: &str, filename: &str) -> Result<PathBuf> {
-    let path = TEMPLATES_DIR.join(app).join(filename);
-    anyhow::ensure!(path.exists(), "template not found: {}", path.display());
-    Ok(path)
-}
-
-fn backup_and_write(rel: &Path, content: &str, dry_run: bool) -> Result<()> {
-    if dry_run {
-        let dest = Path::new(".").join(rel);
-        if let Some(parent) = dest.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&dest, content)
-            .with_context(|| format!("could not write '{}'", dest.display()))?;
-        println!("  [dry-run] {}", dest.display());
-        return Ok(());
-    }
-
-    let target = CONFIG_DIR.join(rel);
-
-    if target.exists() {
-        let app_name = rel
-            .components()
-            .next()
-            .map(|c| c.as_os_str().to_string_lossy().into_owned())
-            .unwrap_or_else(|| "unknown".to_owned());
-        let backup_dir = CONFIG_DIR.join("axtc").join("backups").join(&app_name);
+    // Create backup
+    if dest.exists() && !dry_run {
+        let backup_dir = CONFIG_DIR
+            .join("axtc")
+            .join("backups")
+            .join(app.to_string());
         std::fs::create_dir_all(&backup_dir)?;
 
-        let filename = target.file_name().unwrap().to_string_lossy();
+        let filename = dest.file_name().unwrap().to_string_lossy();
         let ts = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
         let backup_path = backup_dir.join(format!("{ts}_{filename}"));
-        std::fs::copy(&target, &backup_path)
-            .with_context(|| format!("could not backup '{}'", target.display()))?;
+        std::fs::copy(&dest, &backup_path)
+            .with_context(|| format!("could not backup '{}'", dest.display()))?;
         println!(
-            "  backed up {} → {}",
-            target.display(),
+            "[{}] backed up {} → {}",
+            app,
+            dest.display(),
             backup_path.display()
         );
     }
 
-    if let Some(parent) = target.parent() {
+    // Write config
+    if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    std::fs::write(&target, content)
-        .with_context(|| format!("could not write '{}'", target.display()))?;
-    println!("  wrote {}", target.display());
+
+    std::fs::write(&dest, content)
+        .with_context(|| format!("could not write '{}'", dest.display()))?;
+
+    let clean_path = dest.strip_prefix("./").unwrap_or(&dest);
+    println!("[{}] {}", app, clean_path.display());
     Ok(())
 }
